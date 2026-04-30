@@ -68,11 +68,20 @@ impl From<AppleTrack> for MetadataCandidate {
         let artwork_url = value
             .artwork_url100
             .map(|u| u.replace("100x100bb", "1200x1200bb"));
+
         MetadataCandidate {
             source: MetadataSource::Apple,
             title: value.track_name.unwrap_or_default(),
             artist: value.artist_name.unwrap_or_default(),
             album: value.collection_name,
+            // Important: do NOT force artist into album_artist here.
+            // For compilations, soundtracks, duets, and mixed-artist releases,
+            // track artist and release/album artist can legitimately differ.
+            // Album Artist is resolved later from:
+            //   1. Apple collectionArtistName, if present
+            //   2. MusicBrainz release artist-credit, if high-confidence
+            //   3. existing tag value
+            //   4. cautious single-artist fallback only when safe
             album_artist: value.collection_artist_name,
             track_number: value.track_number,
             track_total: value.track_count,
