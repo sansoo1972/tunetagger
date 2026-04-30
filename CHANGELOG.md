@@ -4,6 +4,59 @@ All notable changes to TuneTagger will be documented in this file.
 
 The format is inspired by Keep a Changelog, and the project uses semantic versioning while it evolves.
 
+## [0.1.3] - 2026-04-30
+
+### Added
+
+- Added batch MP3 tagging for folder processing.
+- Added non-recursive batch behavior by default.
+- Added optional recursive batch processing with `--recursive`.
+- Added MusicBrainz credit enrichment.
+- Added Composer enrichment from MusicBrainz work/artist relationships when available.
+- Added safer Album Artist resolution that does not blindly force Track Artist into Album Artist.
+- Added existing tag preservation for Album Artist and Composer where appropriate.
+- Added batch summary output with successful and failed counts.
+- Added more resilient MusicBrainz response decoding.
+- Added clearer MusicBrainz enrichment warning messages.
+
+### Changed
+
+- Improved Album Artist resolution priority:
+  - Apple/iTunes `collectionArtistName`, when present
+  - MusicBrainz release artist-credit, when available
+  - Existing Album Artist tag, when present
+  - Conservative single-artist fallback only when low-risk
+- Composer is only written when found from a trusted enrichment source or preserved from an existing tag.
+- Batch processing reuses the validated single-file tagging workflow.
+- Batch write outputs tagged copies to the specified output folder while preserving original filenames.
+
+### Validated
+
+- Confirmed actual batch write completed successfully:
+  - Successful: 36
+  - Failed: 0
+- Confirmed batch mode is non-recursive unless `--recursive` is supplied.
+- Confirmed Composer enrichment works for tracks where MusicBrainz has credit data.
+- Confirmed tracks without MusicBrainz composer data are left blank rather than guessed.
+- Confirmed Album Artist and Composer tags are visible through `ffprobe` when present.
+- Confirmed album artwork remains embedded as an attached front-cover image.
+
+### Known Limitations
+
+- Output files are not renamed yet.
+- Batch mode currently supports MP3 files only.
+- Composer enrichment depends on MusicBrainz having recording/work relationship data.
+- Some large or well-known artists may still lack Composer data if MusicBrainz has not added work relationships for the selected recording.
+
+### Backlog
+
+- Add output filename renaming with `--rename`.
+- Add configurable output filename templates.
+- Add nested output filename templates such as `{album_artist}/{album}/{track:02} - {title}.mp3`.
+- Add collision-safe duplicate handling for renamed files.
+- Add sidecar audit JSON.
+- Add optional macOS Apple Music library update support for applying corrected TuneTagger metadata to existing Apple Music tracks.
+
 ## [0.1.2] - 2026-04-29
 
 ### Added
