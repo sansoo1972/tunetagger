@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use tunetagger_core::{AppConfig, ResolvedTags};
 use tunetagger_metadata::{scoring::score_candidate, AppleMetadataClient};
 use tunetagger_recognition::SongRecRecognizer;
-use tunetagger_tags::Id3Mp3TagWriter;
+use tunetagger_tags::{download_artwork, Id3Mp3TagWriter};
 
 #[derive(Debug, Args)]
 pub struct TagArgs {
@@ -38,7 +38,7 @@ pub async fn run(config_path: PathBuf, args: TagArgs) -> anyhow::Result<()> {
         candidate.confidence = score_candidate(
             &identity,
             candidate,
-            config.scoring.duration_tolerance_seconds,
+            config.scoring.duration_tolerance_seconds.into(),
         );
     }
     candidates.sort_by(|a, b| b.confidence.total_cmp(&a.confidence));
@@ -89,6 +89,23 @@ pub async fn run(config_path: PathBuf, args: TagArgs) -> anyhow::Result<()> {
         };
 
         Id3Mp3TagWriter::write_tags(&target, &proposed)?;
+
+        if let Some(artwork_url) = &best.artwork_url {
+            println!("Downloading artwork: {artwork_url}");
+
+            match download_artwork(artwork_url).await {
+                Ok(artwork) => {
+                    Id3Mp3TagWriter::embed_artwork(&target, &artwork.bytes, &artwork.mime_type)?;
+                    println!("Embedded artwork.");
+                }
+                Err(err) => {
+                    eprintln!("Warning: could not embed artwork: {err}");
+                }
+            }
+        } else {
+            println!("No artwork URL found for best candidate.");
+        }
+
         println!("Wrote tags to {}", target.display());
     } else {
         println!("Dry run only. Use --write without --dry-run to modify an output copy or file.");
