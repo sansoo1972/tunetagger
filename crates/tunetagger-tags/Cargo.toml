@@ -1,0 +1,13 @@
+[package]
+name = "tunetagger-tags"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+tunetagger-core = { path = "../tunetagger-core" }
+id3.workspace = true
+reqwest.workspace = true
+async-trait.workspace = true

@@ -1,0 +1,13 @@
+[package]
+name = "tunetagger-files"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+tunetagger-core = { path = "../tunetagger-core" }
+walkdir.workspace = true
+serde_json.workspace = true
+sanitize-filename.workspace = true
