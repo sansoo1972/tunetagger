@@ -27,7 +27,7 @@ pub async fn run(config_path: PathBuf, args: LookupArgs) -> anyhow::Result<()> {
         candidate.confidence = score_candidate(
             &identity,
             candidate,
-            config.scoring.duration_tolerance_seconds,
+            config.scoring.duration_tolerance_seconds.into(),
         );
     }
 

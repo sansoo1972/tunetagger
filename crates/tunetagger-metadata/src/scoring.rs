@@ -3,42 +3,71 @@ use tunetagger_core::{MetadataCandidate, TrackIdentity};
 pub fn score_candidate(
     identity: &TrackIdentity,
     candidate: &MetadataCandidate,
-    duration_tolerance_seconds: u16,
+    duration_tolerance_seconds: u64,
 ) -> f32 {
-    let mut score = 0.0;
+    let mut score: f32 = 0.0;
 
-    if eq_norm(&identity.title, &candidate.title) {
-        score += 30.0;
+    let identity_title = normalize(&identity.title);
+    let identity_artist = normalize(&identity.artist);
+    let identity_album = identity.album.as_ref().map(|value| normalize(value));
+
+    let candidate_title = normalize(&candidate.title);
+    let candidate_artist = normalize(&candidate.artist);
+    let candidate_album = candidate.album.as_ref().map(|value| normalize(value));
+
+    if identity_title == candidate_title {
+        score += 35.0;
+    } else if fuzzy_contains(&identity_title, &candidate_title) {
+        score += 22.0;
     }
 
-    if eq_norm(&identity.artist, &candidate.artist) {
-        score += 30.0;
+    if identity_artist == candidate_artist {
+        score += 35.0;
+    } else if fuzzy_contains(&identity_artist, &candidate_artist) {
+        score += 22.0;
     }
 
-    if let (Some(a), Some(b)) = (identity.duration_ms, candidate.duration_ms) {
-        let delta = a.abs_diff(b);
-        if delta <= u64::from(duration_tolerance_seconds) * 1000 {
+    if let (Some(identity_album), Some(candidate_album)) = (&identity_album, &candidate_album) {
+        if identity_album == candidate_album {
             score += 20.0;
-        }
-    }
-
-    if let (Some(a), Some(b)) = (&identity.album, &candidate.album) {
-        if eq_norm(a, b) {
+        } else if fuzzy_contains(identity_album, candidate_album) {
             score += 10.0;
         }
     }
 
-    score
-}
+    if let (Some(identity_duration), Some(candidate_duration)) =
+        (identity.duration_ms, candidate.duration_ms)
+    {
+        let tolerance_ms = duration_tolerance_seconds * 1000;
+        let delta = identity_duration.abs_diff(candidate_duration);
 
-fn eq_norm(a: &str, b: &str) -> bool {
-    normalize(a) == normalize(b)
+        if delta <= tolerance_ms {
+            score += 10.0;
+        } else if delta <= tolerance_ms * 2 {
+            score += 5.0;
+        }
+    }
+
+    score.min(100.0_f32)
 }
 
 fn normalize(value: &str) -> String {
     value
-        .to_ascii_lowercase()
+        .trim()
+        .to_lowercase()
+        .replace('&', "and")
         .chars()
-        .filter(|c| c.is_alphanumeric())
-        .collect()
+        .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+        .collect::<String>()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn fuzzy_contains(a: &str, b: &str) -> bool {
+    if a.is_empty() || b.is_empty() {
+        return false;
+    }
+
+    a.contains(b) || b.contains(a)
 }
