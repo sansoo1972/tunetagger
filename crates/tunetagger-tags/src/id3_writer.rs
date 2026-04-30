@@ -16,6 +16,10 @@ impl Id3Mp3TagWriter {
             artist: tag.artist().map(ToOwned::to_owned),
             album: tag.album().map(ToOwned::to_owned),
             album_artist: tag.album_artist().map(ToOwned::to_owned),
+            composer: tag
+                .get("TCOM")
+                .and_then(|frame| frame.content().text())
+                .map(ToOwned::to_owned),
             genre: tag.genre().map(ToOwned::to_owned),
             release_date: tag.year().map(|year| year.to_string()),
             track_number: tag.track().and_then(|value| u16::try_from(value).ok()),
@@ -85,12 +89,16 @@ impl Id3Mp3TagWriter {
     ) -> TuneTaggerResult<()> {
         let path = path.as_ref();
         let mut tag = id3::Tag::read_from_path(path).unwrap_or_default();
+
+        tag.remove("APIC");
+
         tag.add_frame(id3::frame::Picture {
-            mime_type: mime_type.to_string(),
+            mime_type: normalize_mime_type(mime_type).to_string(),
             picture_type: id3::frame::PictureType::CoverFront,
-            description: "cover".to_string(),
+            description: String::new(),
             data: image.to_vec(),
         });
+
         tag.write_to_path(path, id3::Version::Id3v24)
             .map_err(|err| TuneTaggerError::Tagging(err.to_string()))
     }
@@ -102,4 +110,15 @@ fn set_lyrics(tag: &mut id3::Tag, lyrics: &Lyrics) {
         description: lyrics.description.clone().unwrap_or_default(),
         text: lyrics.text.clone(),
     });
+}
+
+fn normalize_mime_type(mime_type: &str) -> &str {
+    let mime_type = mime_type.split(';').next().unwrap_or(mime_type).trim();
+
+    match mime_type {
+        "image/jpg" => "image/jpeg",
+        "image/jpeg" => "image/jpeg",
+        "image/png" => "image/png",
+        _ => "image/jpeg",
+    }
 }

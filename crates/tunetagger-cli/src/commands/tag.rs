@@ -1,7 +1,10 @@
 use clap::Args;
 use std::path::PathBuf;
 use tunetagger_core::{AppConfig, ResolvedTags};
-use tunetagger_metadata::{scoring::score_candidate, AppleMetadataClient};
+use tunetagger_metadata::{
+    infer_album_artist_only_if_safe, scoring::score_candidate, AppleMetadataClient,
+    MusicBrainzClient,
+};
 use tunetagger_recognition::SongRecRecognizer;
 use tunetagger_tags::{download_artwork, Id3Mp3TagWriter};
 
@@ -24,7 +27,6 @@ pub async fn run(config_path: PathBuf, args: TagArgs) -> anyhow::Result<()> {
     let existing = Id3Mp3TagWriter::read_tags(&args.path)?;
 
     let path = args.path.clone();
-
     let identity = tokio::task::spawn_blocking(move || {
         let recognizer = SongRecRecognizer::default();
         recognizer.recognize_file(path)
@@ -48,18 +50,40 @@ pub async fn run(config_path: PathBuf, args: TagArgs) -> anyhow::Result<()> {
         return Ok(());
     };
 
+    let musicbrainz = MusicBrainzClient::default();
+    let enrichment = match musicbrainz.enrich(best).await {
+        Ok(value) => value,
+        Err(err) => {
+            eprintln!("Warning: MusicBrainz enrichment failed: {err}");
+            Default::default()
+        }
+    };
+
+    let album_artist = best
+        .album_artist
+        .clone()
+        .or_else(|| enrichment.album_artist.clone())
+        .or_else(|| existing.album_artist.clone())
+        .or_else(|| infer_album_artist_only_if_safe(&identity, best));
+
+    let composer = enrichment
+        .composer
+        .clone()
+        .or_else(|| best.composer.clone())
+        .or_else(|| existing.composer.clone());
+
     let proposed = ResolvedTags {
         title: best.title.clone(),
         artist: best.artist.clone(),
         album: best.album.clone(),
-        album_artist: best.album_artist.clone(),
+        album_artist,
         track_number: best.track_number,
         track_total: best.track_total,
         disc_number: best.disc_number,
         disc_total: best.disc_total,
         release_date: best.release_date.clone(),
         genre: best.genre.clone(),
-        composer: best.composer.clone(),
+        composer,
         sort_artist: None,
         sort_album: None,
         sort_album_artist: None,
@@ -68,14 +92,31 @@ pub async fn run(config_path: PathBuf, args: TagArgs) -> anyhow::Result<()> {
 
     println!("Best candidate score: {:.1}", best.confidence);
     println!("Proposed tags:");
-    println!("  Title:  {:?} -> {}", existing.title, proposed.title);
-    println!("  Artist: {:?} -> {}", existing.artist, proposed.artist);
-    println!("  Album:  {:?} -> {:?}", existing.album, proposed.album);
+    println!("  Title:        {:?} -> {}", existing.title, proposed.title);
     println!(
-        "  Track:  {:?} -> {:?}",
+        "  Artist:       {:?} -> {}",
+        existing.artist, proposed.artist
+    );
+    println!(
+        "  Album:        {:?} -> {:?}",
+        existing.album, proposed.album
+    );
+    println!(
+        "  Album Artist: {:?} -> {:?}",
+        existing.album_artist, proposed.album_artist
+    );
+    println!(
+        "  Composer:     {:?} -> {:?}",
+        existing.composer, proposed.composer
+    );
+    println!(
+        "  Track:        {:?} -> {:?}",
         existing.track_number, proposed.track_number
     );
-    println!("  Genre:  {:?} -> {:?}", existing.genre, proposed.genre);
+    println!(
+        "  Genre:        {:?} -> {:?}",
+        existing.genre, proposed.genre
+    );
 
     if args.write && !args.dry_run {
         let target = if let Some(output_dir) = args.output {
