@@ -23,17 +23,20 @@ pub async fn run(config_path: PathBuf, args: TagArgs) -> anyhow::Result<()> {
     let config = AppConfig::load(config_path)?;
     let existing = Id3Mp3TagWriter::read_tags(&args.path)?;
 
-    let recognizer = SongRecRecognizer::new(
-        config.recognition.songrec_path,
-        config.recognition.timeout_seconds,
-    );
-    let recognition = recognizer.recognize_file(&args.path).await?;
+    let path = args.path.clone();
+
+    let identity = tokio::task::spawn_blocking(move || {
+        let recognizer = SongRecRecognizer::default();
+        recognizer.recognize_file(path)
+    })
+    .await??;
+
     let client = AppleMetadataClient::default();
-    let mut candidates = client.search_track(&recognition.identity).await?;
+    let mut candidates = client.search_track(&identity).await?;
 
     for candidate in &mut candidates {
         candidate.confidence = score_candidate(
-            &recognition.identity,
+            &identity,
             candidate,
             config.scoring.duration_tolerance_seconds,
         );
