@@ -2385,7 +2385,7 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 
 [[package]]
 name = "tunetagger"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "clap 4.6.1",
@@ -2402,7 +2402,7 @@ dependencies = [
 
 [[package]]
 name = "tunetagger-core"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "serde",
@@ -2414,7 +2414,7 @@ dependencies = [
 
 [[package]]
 name = "tunetagger-files"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "sanitize-filename",
  "serde_json",
@@ -2424,7 +2424,7 @@ dependencies = [
 
 [[package]]
 name = "tunetagger-metadata"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "reqwest 0.12.28",
  "serde",
@@ -2435,7 +2435,7 @@ dependencies = [
 
 [[package]]
 name = "tunetagger-recognition"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "serde_json",
@@ -2447,7 +2447,7 @@ dependencies = [
 
 [[package]]
 name = "tunetagger-tags"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "async-trait",
  "id3",

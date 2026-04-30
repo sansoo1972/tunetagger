@@ -11,8 +11,8 @@ members = [
 
 [workspace.package]
 edition = "2021"
-version = "0.1.0"
-authors = ["Richard"]
+version = "0.1.2"
+authors = ["sansoo1972"]
 license = "MIT"
 repository = "https://github.com/sansoo1972/tunetagger"
 rust-version = "1.78"
