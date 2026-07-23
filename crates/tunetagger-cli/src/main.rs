@@ -11,7 +11,7 @@ struct Cli {
     config: PathBuf,
 
     #[command(subcommand)]
-    command: Command,
+    command: Option<Command>,
 }
 
 #[derive(Debug, Subcommand)]
@@ -21,6 +21,8 @@ enum Command {
     Lookup(commands::lookup::LookupArgs),
     Tag(commands::tag::TagArgs),
     Batch(commands::batch::BatchArgs),
+    /// Start the guided interactive setup
+    Interactive,
 }
 
 #[tokio::main]
@@ -32,11 +34,12 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Command::Scan(args) => commands::scan::run(args).await?,
-        Command::Recognize(args) => commands::recognize::run(cli.config, args).await?,
-        Command::Lookup(args) => commands::lookup::run(cli.config, args).await?,
-        Command::Tag(args) => commands::tag::run(cli.config, args).await?,
-        Command::Batch(args) => commands::batch::run(cli.config, args).await?,
+        Some(Command::Scan(args)) => commands::scan::run(args).await?,
+        Some(Command::Recognize(args)) => commands::recognize::run(cli.config, args).await?,
+        Some(Command::Lookup(args)) => commands::lookup::run(cli.config, args).await?,
+        Some(Command::Tag(args)) => commands::tag::run(cli.config, args).await?,
+        Some(Command::Batch(args)) => commands::batch::run(cli.config, args).await?,
+        Some(Command::Interactive) | None => commands::interactive::run(cli.config).await?,
     }
 
     Ok(())

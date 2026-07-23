@@ -49,6 +49,8 @@ TuneTagger is intentionally conservative. It does not invent missing metadata. F
 ## Current CLI
 
 ```bash
+tunetagger
+tunetagger interactive
 tunetagger scan ./input
 tunetagger recognize ./input/song.mp3
 tunetagger lookup ./input/song.mp3
@@ -59,6 +61,12 @@ tunetagger batch ./input --write --recursive --output ./tagged
 tunetagger batch ./input --write --output ./tagged --report ./reports/batch.txt
 tunetagger batch ./input --write --output ./tagged --existing skip
 ```
+
+Running `tunetagger` without a subcommand starts a guided setup. It asks for the
+source and destination folders, whether to include subfolders, dry-run or write
+mode, existing-file behavior, and the report location. It shows all selections
+for confirmation before processing. `tunetagger interactive` starts the same
+wizard explicitly.
 
 During development, run through Cargo:
 
