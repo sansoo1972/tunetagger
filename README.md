@@ -8,7 +8,7 @@ Apple Music/iTunes Match is treated as a downstream use case, not a core depende
 
 ## Current milestone
 
-Current milestone: `v0.1.3`.
+Current milestone: `v0.1.4`.
 
 Validated so far:
 
@@ -20,14 +20,19 @@ tag dry-run  works
 tag write    works
 artwork      embeds successfully
 batch write  works, non-recursive by default
+batch report works with detailed outcomes
+existing destination handling works
+guided setup works
 ```
 
 The latest validated batch run completed successfully:
 
 ```text
 Batch complete.
-  Successful: 36
+  Successful: 0
+  Skipped:    1
   Failed:     0
+  Report:     batch-report.txt
 ```
 
 ## Current workflow
@@ -131,6 +136,11 @@ skip it, skip all further matches for this run, or process it. Automated and
 non-interactive runs should select `--existing skip` or `--existing process`.
 Skipped matches are listed separately in the console summary and batch report.
 
+Recognition failures are categorized in the report. An unmatched recording is
+reported as `recognition / no match`; real connectivity failures are reported
+as `network`. Audio decoding, fingerprinting, validation, and malformed service
+responses are shown separately.
+
 ## Project layout
 
 ```text
@@ -157,6 +167,9 @@ Current:
 - Download and embed album artwork
 - Batch-tag MP3 files in a directory
 - Keep batch processing non-recursive by default
+- Generate readable batch reports with successful, skipped, and failed files
+- Detect existing destination files before recognition and metadata requests
+- Guide interactive users through batch setup and confirmation
 - Use MusicBrainz for Composer enrichment when available
 - Use MusicBrainz release artist-credit for Album Artist when available
 - Preserve existing Album Artist and Composer when appropriate
@@ -198,7 +211,9 @@ cargo run -p tunetagger -- batch ./input --write --output ./tagged
 
 This leaves the source MP3s untouched and creates tagged copies.
 
-Do not place the output directory inside the input tree when using `--recursive`, or already-tagged output files may be discovered on future recursive runs.
+An output directory may be nested inside the input tree. TuneTagger automatically
+excludes the destination subtree from recursive scans so output files are not
+processed again.
 
 ## Requirements
 
