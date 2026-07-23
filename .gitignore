@@ -6,3 +6,7 @@
 /review/
 /archive/
 /reports/
+
+# Generated batch run reports
+/batch-report.txt
+/batchreport.txt
