@@ -18,7 +18,6 @@ struct BatchFailure {
 struct BatchSkipped {
     source: PathBuf,
     destination: PathBuf,
-    reason: String,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, ValueEnum)]
@@ -65,7 +64,8 @@ pub struct BatchArgs {
 
 pub async fn run(config_path: PathBuf, args: BatchArgs) -> anyhow::Result<()> {
     let _config = AppConfig::load(&config_path)?;
-    let files = scan_mp3_files(&args.path, args.recursive)?;
+    let mut files = scan_mp3_files(&args.path, args.recursive)?;
+    exclude_output_tree(&mut files, &args.output);
 
     println!("Found {} MP3 file(s)", files.len());
 
@@ -101,7 +101,6 @@ pub async fn run(config_path: PathBuf, args: BatchArgs) -> anyhow::Result<()> {
                     skipped.push(BatchSkipped {
                         source: file.path,
                         destination,
-                        reason: "matching destination filename already exists".to_owned(),
                     });
                     continue;
                 }
@@ -143,7 +142,14 @@ pub async fn run(config_path: PathBuf, args: BatchArgs) -> anyhow::Result<()> {
         }
     }
 
-    write_report(&args.report, &args.path, &succeeded, &skipped, &failed)?;
+    write_report(
+        &args.report,
+        &args.path,
+        &args.output,
+        &succeeded,
+        &skipped,
+        &failed,
+    )?;
 
     println!();
     println!("Batch complete.");
@@ -170,6 +176,18 @@ pub async fn run(config_path: PathBuf, args: BatchArgs) -> anyhow::Result<()> {
 
 fn destination_path(output: &Path, source: &Path) -> PathBuf {
     output.join(source.file_name().unwrap_or_default())
+}
+
+fn exclude_output_tree(files: &mut Vec<tunetagger_core::AudioFile>, output: &Path) {
+    let Ok(output) = std::fs::canonicalize(output) else {
+        return;
+    };
+
+    files.retain(|file| {
+        std::fs::canonicalize(&file.path)
+            .map(|path| !path.starts_with(&output))
+            .unwrap_or(true)
+    });
 }
 
 fn prompt_for_existing(source: &Path, destination: &Path) -> anyhow::Result<ExistingDecision> {
@@ -229,6 +247,7 @@ fn parse_existing_choice(answer: &str) -> Option<ExistingDecision> {
 fn write_report(
     report_path: &Path,
     input_path: &Path,
+    output_path: &Path,
     succeeded: &[PathBuf],
     skipped: &[BatchSkipped],
     failed: &[BatchFailure],
@@ -241,49 +260,94 @@ fn write_report(
     }
 
     let mut report = String::new();
-    writeln!(report, "TuneTagger Batch Report")?;
-    writeln!(report, "Input: {}", input_path.display())?;
-    writeln!(report, "Successful: {}", succeeded.len())?;
-    writeln!(report, "Skipped: {}", skipped.len())?;
-    writeln!(report, "Failed: {}", failed.len())?;
+    writeln!(report, "TUNETAGGER BATCH REPORT")?;
+    writeln!(report, "=======================")?;
+    writeln!(report, "Source:      {}", input_path.display())?;
+    writeln!(report, "Destination: {}", output_path.display())?;
+    writeln!(report)?;
+    writeln!(report, "RESULTS")?;
+    writeln!(report, "-------")?;
+    writeln!(report, "Successful  {:>6}", succeeded.len())?;
+    writeln!(report, "Skipped     {:>6}", skipped.len())?;
+    writeln!(report, "Failed      {:>6}", failed.len())?;
 
-    writeln!(report, "\nSUCCEEDED")?;
-    if succeeded.is_empty() {
-        writeln!(report, "(none)")?;
-    } else {
-        for path in succeeded {
-            writeln!(report, "[OK] {}", path.display())?;
-        }
-    }
-
-    writeln!(report, "\nSKIPPED")?;
-    if skipped.is_empty() {
-        writeln!(report, "(none)")?;
-    } else {
-        for item in skipped {
-            writeln!(report, "[SKIPPED] {}", item.source.display())?;
-            writeln!(report, "  Destination: {}", item.destination.display())?;
-            writeln!(report, "  Reason: {}", item.reason)?;
-        }
-    }
-
-    writeln!(report, "\nFAILED")?;
+    writeln!(report, "\nFAILED FILES ({})", failed.len())?;
+    writeln!(
+        report,
+        "{}",
+        "-".repeat(15 + failed.len().to_string().len())
+    )?;
     if failed.is_empty() {
-        writeln!(report, "(none)")?;
+        writeln!(report, "None")?;
     } else {
-        for failure in failed {
+        for (index, failure) in failed.iter().enumerate() {
             writeln!(
                 report,
-                "[{}] {}",
-                failure.category.to_uppercase(),
-                failure.path.display()
+                "{}. {}",
+                index + 1,
+                display_relative(&failure.path, input_path)
             )?;
-            writeln!(report, "  Reason: {}", indent_continuation(&failure.reason))?;
+            writeln!(report, "   Category: {}", failure.category)?;
+            writeln!(
+                report,
+                "   Reason:   {}",
+                indent_report_reason(&failure.reason)
+            )?;
+        }
+    }
+
+    writeln!(report, "\nSKIPPED FILES ({})", skipped.len())?;
+    writeln!(
+        report,
+        "{}",
+        "-".repeat(16 + skipped.len().to_string().len())
+    )?;
+    if skipped.is_empty() {
+        writeln!(report, "None")?;
+    } else {
+        writeln!(
+            report,
+            "These files were skipped because the destination filename already exists."
+        )?;
+        for (index, item) in skipped.iter().enumerate() {
+            writeln!(
+                report,
+                "{}. {} -> {}",
+                index + 1,
+                display_relative(&item.source, input_path),
+                display_relative(&item.destination, output_path)
+            )?;
+        }
+    }
+
+    writeln!(report, "\nSUCCESSFUL FILES ({})", succeeded.len())?;
+    writeln!(
+        report,
+        "{}",
+        "-".repeat(19 + succeeded.len().to_string().len())
+    )?;
+    if succeeded.is_empty() {
+        writeln!(report, "None")?;
+    } else {
+        for (index, path) in succeeded.iter().enumerate() {
+            writeln!(
+                report,
+                "{}. {}",
+                index + 1,
+                display_relative(path, input_path)
+            )?;
         }
     }
 
     std::fs::write(report_path, report)?;
     Ok(())
+}
+
+fn display_relative(path: &Path, base: &Path) -> String {
+    path.strip_prefix(base)
+        .unwrap_or(path)
+        .display()
+        .to_string()
 }
 
 fn failure_category(error: &anyhow::Error) -> &'static str {
@@ -323,8 +387,8 @@ fn brief_reason(reason: &str) -> String {
     shortened
 }
 
-fn indent_continuation(reason: &str) -> String {
-    reason.replace('\n', "\n          ")
+fn indent_report_reason(reason: &str) -> String {
+    reason.replace('\n', "\n             ")
 }
 
 #[cfg(test)]
@@ -358,7 +422,6 @@ mod tests {
         let skipped = vec![BatchSkipped {
             source: PathBuf::from("input/existing.mp3"),
             destination: PathBuf::from("output/existing.mp3"),
-            reason: "matching destination filename already exists".to_owned(),
         }];
         let failed = vec![BatchFailure {
             path: PathBuf::from("input/bad.mp3"),
@@ -369,6 +432,7 @@ mod tests {
         write_report(
             &report_path,
             Path::new("input"),
+            Path::new("output"),
             &succeeded,
             &skipped,
             &failed,
@@ -377,14 +441,17 @@ mod tests {
         let report = std::fs::read_to_string(&report_path).unwrap();
         std::fs::remove_file(&report_path).unwrap();
 
-        assert!(report.contains("Successful: 1"));
-        assert!(report.contains("Skipped: 1"));
-        assert!(report.contains("Failed: 1"));
-        assert!(report.contains("[OK] input/good.mp3"));
-        assert!(report.contains("[SKIPPED] input/existing.mp3"));
-        assert!(report.contains("Destination: output/existing.mp3"));
-        assert!(report.contains("[RECOGNITION] input/bad.mp3"));
-        assert!(report.contains("Reason: recognition failed: no match"));
+        assert!(report.contains("Successful       1"));
+        assert!(report.contains("Skipped          1"));
+        assert!(report.contains("Failed           1"));
+        assert!(report.contains("FAILED FILES (1)"));
+        assert!(report.contains("1. bad.mp3"));
+        assert!(report.contains("Category: recognition"));
+        assert!(report.contains("Reason:   recognition failed: no match"));
+        assert!(report.contains("SKIPPED FILES (1)"));
+        assert!(report.contains("1. existing.mp3 -> existing.mp3"));
+        assert!(report.contains("SUCCESSFUL FILES (1)"));
+        assert!(report.contains("1. good.mp3"));
     }
 
     #[test]
