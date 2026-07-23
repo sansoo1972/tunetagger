@@ -15,7 +15,7 @@ pub async fn run(config_path: PathBuf, args: LookupArgs) -> anyhow::Result<()> {
     let path = args.path.clone();
 
     let identity = tokio::task::spawn_blocking(move || {
-        let recognizer = SongRecRecognizer::default();
+        let recognizer = SongRecRecognizer;
         recognizer.recognize_file(path)
     })
     .await??;

@@ -23,12 +23,23 @@ pub struct TagArgs {
 }
 
 pub async fn run(config_path: PathBuf, args: TagArgs) -> anyhow::Result<()> {
+    run_with_outcome(config_path, args).await?;
+    Ok(())
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum TagOutcome {
+    Completed,
+    NoMetadataCandidates,
+}
+
+pub async fn run_with_outcome(config_path: PathBuf, args: TagArgs) -> anyhow::Result<TagOutcome> {
     let config = AppConfig::load(config_path)?;
     let existing = Id3Mp3TagWriter::read_tags(&args.path)?;
 
     let path = args.path.clone();
     let identity = tokio::task::spawn_blocking(move || {
-        let recognizer = SongRecRecognizer::default();
+        let recognizer = SongRecRecognizer;
         recognizer.recognize_file(path)
     })
     .await??;
@@ -47,7 +58,7 @@ pub async fn run(config_path: PathBuf, args: TagArgs) -> anyhow::Result<()> {
 
     let Some(best) = candidates.first() else {
         println!("No metadata candidates found.");
-        return Ok(());
+        return Ok(TagOutcome::NoMetadataCandidates);
     };
 
     let musicbrainz = MusicBrainzClient::default();
@@ -152,5 +163,5 @@ pub async fn run(config_path: PathBuf, args: TagArgs) -> anyhow::Result<()> {
         println!("Dry run only. Use --write without --dry-run to modify an output copy or file.");
     }
 
-    Ok(())
+    Ok(TagOutcome::Completed)
 }

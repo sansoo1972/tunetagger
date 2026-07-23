@@ -4,6 +4,45 @@ All notable changes to TuneTagger will be documented in this file.
 
 The format is inspired by Keep a Changelog, and the project uses semantic versioning while it evolves.
 
+## [0.1.4] - 2026-07-23
+
+### Added
+
+- Added a detailed plain-text batch report with successful, skipped, and failed files.
+- Added configurable report paths through `--report`.
+- Added concise console failure diagnostics and the generated report location.
+- Added destination-file detection before recognition and metadata processing.
+- Added `--existing ask`, `--existing skip`, and `--existing process` policies.
+- Added per-file interactive choices to skip, skip all remaining matches, or process a match.
+- Added a guided batch setup when running `tunetagger` without a subcommand or with `tunetagger interactive`.
+- Added guided prompts for source, destination, recursion, run mode, existing-file behavior, and report location.
+- Added a final settings review and confirmation before guided processing begins.
+
+### Changed
+
+- Improved batch report readability with a compact results summary, failures first, relative paths, and numbered file lists.
+- Changed batch reporting to classify recognition failures as no match, network, audio decoding, fingerprinting, validation, or invalid service response.
+- Empty recognition results are now reported as `recognition / no match` instead of misleading network failures.
+- Recursive batch scans automatically exclude a destination directory nested inside the source tree.
+- Batch mode remains non-recursive by default.
+- Guided runs default to dry-run mode and require confirmation before processing.
+
+### Fixed
+
+- Fixed output files being rediscovered when the destination directory was nested inside a recursively scanned source.
+- Fixed repeated skip reasons and long absolute paths making large reports difficult to review.
+- Fixed SongRec empty-match responses being surfaced as network errors.
+- Fixed files with no metadata candidates being counted as successful batch items.
+- Fixed interactive runs potentially waiting for prompts when standard input is non-interactive.
+
+### Validated
+
+- Confirmed custom and default batch report paths.
+- Confirmed skip, process, skip-all, and non-interactive existing-file behavior.
+- Confirmed nested destination directories are excluded from recursive scans.
+- Confirmed the guided setup completes an end-to-end dry run and writes its report.
+- Added automated coverage for report rendering, failure classification, existing-file decisions, and guided setup.
+
 ## [0.1.3] - 2026-04-30
 
 ### Added

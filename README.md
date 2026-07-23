@@ -8,7 +8,7 @@ Apple Music/iTunes Match is treated as a downstream use case, not a core depende
 
 ## Current milestone
 
-Current milestone: `v0.1.3`.
+Current milestone: `v0.1.4`.
 
 Validated so far:
 
@@ -20,14 +20,19 @@ tag dry-run  works
 tag write    works
 artwork      embeds successfully
 batch write  works, non-recursive by default
+batch report works with detailed outcomes
+existing destination handling works
+guided setup works
 ```
 
 The latest validated batch run completed successfully:
 
 ```text
 Batch complete.
-  Successful: 36
+  Successful: 0
+  Skipped:    1
   Failed:     0
+  Report:     batch-report.txt
 ```
 
 ## Current workflow
@@ -49,6 +54,8 @@ TuneTagger is intentionally conservative. It does not invent missing metadata. F
 ## Current CLI
 
 ```bash
+tunetagger
+tunetagger interactive
 tunetagger scan ./input
 tunetagger recognize ./input/song.mp3
 tunetagger lookup ./input/song.mp3
@@ -56,7 +63,15 @@ tunetagger tag ./input/song.mp3 --dry-run
 tunetagger tag ./input/song.mp3 --write --output ./tagged
 tunetagger batch ./input --write --output ./tagged
 tunetagger batch ./input --write --recursive --output ./tagged
+tunetagger batch ./input --write --output ./tagged --report ./reports/batch.txt
+tunetagger batch ./input --write --output ./tagged --existing skip
 ```
+
+Running `tunetagger` without a subcommand starts a guided setup. It asks for the
+source and destination folders, whether to include subfolders, dry-run or write
+mode, existing-file behavior, and the report location. It shows all selections
+for confirmation before processing. `tunetagger interactive` starts the same
+wizard explicitly.
 
 During development, run through Cargo:
 
@@ -111,6 +126,20 @@ cargo run -p tunetagger -- batch "/path/to/mp3-folder" \
 ```
 
 Batch mode currently processes MP3 files only. It is non-recursive unless `--recursive` is supplied.
+After processing, it writes a plain-text report to `batch-report.txt`. Use `--report <path>`
+to choose another location. The report lists every successful file and every failed file,
+including the failure category and detailed reason.
+
+Before processing a file, batch mode checks for the same filename in the output
+directory. The default `--existing ask` policy prompts when a match is found:
+skip it, skip all further matches for this run, or process it. Automated and
+non-interactive runs should select `--existing skip` or `--existing process`.
+Skipped matches are listed separately in the console summary and batch report.
+
+Recognition failures are categorized in the report. An unmatched recording is
+reported as `recognition / no match`; real connectivity failures are reported
+as `network`. Audio decoding, fingerprinting, validation, and malformed service
+responses are shown separately.
 
 ## Project layout
 
@@ -138,6 +167,9 @@ Current:
 - Download and embed album artwork
 - Batch-tag MP3 files in a directory
 - Keep batch processing non-recursive by default
+- Generate readable batch reports with successful, skipped, and failed files
+- Detect existing destination files before recognition and metadata requests
+- Guide interactive users through batch setup and confirmation
 - Use MusicBrainz for Composer enrichment when available
 - Use MusicBrainz release artist-credit for Album Artist when available
 - Preserve existing Album Artist and Composer when appropriate
@@ -179,7 +211,9 @@ cargo run -p tunetagger -- batch ./input --write --output ./tagged
 
 This leaves the source MP3s untouched and creates tagged copies.
 
-Do not place the output directory inside the input tree when using `--recursive`, or already-tagged output files may be discovered on future recursive runs.
+An output directory may be nested inside the input tree. TuneTagger automatically
+excludes the destination subtree from recursive scans so output files are not
+processed again.
 
 ## Requirements
 
