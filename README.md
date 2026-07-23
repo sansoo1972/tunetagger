@@ -51,11 +51,106 @@ MP3 input
 
 TuneTagger is intentionally conservative. It does not invent missing metadata. For example, Composer is only written when a trusted source such as MusicBrainz provides usable composer/writer data, or when an existing Composer tag is preserved.
 
-## Current CLI
+## Recommended workflow: guided setup
+
+For normal use, run TuneTagger without a subcommand:
 
 ```bash
 tunetagger
+```
+
+When running from this source repository, use:
+
+```bash
+cd ~/Documents/Projects/tunetagger
+cargo run -p tunetagger
+```
+
+TuneTagger starts an interactive wizard and guides you through the complete
+batch setup. You do not need to remember the batch arguments.
+
+### What the wizard asks
+
+1. **Operation** — select batch tagging or quit without making changes.
+2. **Source folder** — the folder containing the MP3 files to examine. The
+   folder must already exist. Paths containing spaces and paths beginning with
+   `~/` are supported.
+3. **Destination folder** — where tagged copies should be written. Press Enter
+   to use `<source>/batch_tagged`.
+4. **Include subfolders** — choose whether MP3 files inside artist, album, or
+   other nested folders should be included. The safe default is `No`.
+5. **Run mode**:
+
+   - `dry run` recognizes tracks and previews proposed metadata without writing
+     tagged copies.
+   - `write` creates tagged copies in the destination folder. Source MP3 files
+     remain unchanged.
+
+6. **Existing destination files**:
+
+   - `ask` prompts for each matching destination filename.
+   - `skip` ignores all matching destination files for this run.
+   - `process` processes matches even when the destination filename exists.
+
+7. **Report file** — press Enter to create `batch-report.txt`, or enter another
+   path.
+8. **Confirmation** — review every selection and approve the run. Answering
+   `No` cancels without processing files.
+
+Example:
+
+```text
+TuneTagger guided setup
+=======================
+1. Batch-tag an MP3 folder
+q. Quit
+Choose an operation [1]:
+Source folder: ~/Music/to-tag
+Destination folder [/Users/you/Music/to-tag/batch_tagged]:
+Include MP3 files from subfolders? [y/N]: n
+Run mode: dry run or write tagged copies? [d/w, default d]: d
+When a destination file exists: ask, skip, or process? [a/s/p, default a]: a
+Report file [batch-report.txt]:
+
+Review settings
+---------------
+Source:             /Users/you/Music/to-tag
+Destination:        /Users/you/Music/to-tag/batch_tagged
+Include subfolders: no
+Mode:               dry run
+Existing files:     ask case by case
+Report:             batch-report.txt
+Start with these settings? [y/N]:
+```
+
+If the destination is inside the source folder, TuneTagger excludes it from
+recursive scans. This prevents previously tagged output files from being
+processed again.
+
+When `ask` is selected and a matching destination file is found, enter:
+
+- `s` to skip only that file.
+- `a` to skip that file and all later matches in the current run.
+- `p` to process that file and continue asking about later matches.
+
+At completion, the console shows successful, skipped, and failed counts plus
+the report location. The report lists files by outcome and includes specific
+failure categories such as `recognition / no match`, `network`,
+`audio decoding`, and `fingerprinting`.
+
+The same wizard can be started explicitly:
+
+```bash
 tunetagger interactive
+```
+
+## Advanced and automated CLI usage
+
+Manual arguments remain fully supported for scripts, scheduled jobs, and users
+who want deterministic non-interactive runs. For ordinary terminal use, the
+guided setup above is the recommended interface.
+
+```bash
 tunetagger scan ./input
 tunetagger recognize ./input/song.mp3
 tunetagger lookup ./input/song.mp3
@@ -66,12 +161,6 @@ tunetagger batch ./input --write --recursive --output ./tagged
 tunetagger batch ./input --write --output ./tagged --report ./reports/batch.txt
 tunetagger batch ./input --write --output ./tagged --existing skip
 ```
-
-Running `tunetagger` without a subcommand starts a guided setup. It asks for the
-source and destination folders, whether to include subfolders, dry-run or write
-mode, existing-file behavior, and the report location. It shows all selections
-for confirmation before processing. `tunetagger interactive` starts the same
-wizard explicitly.
 
 During development, run through Cargo:
 
@@ -197,7 +286,17 @@ Composer resolution priority:
 
 TuneTagger is intentionally conservative.
 
-The recommended workflow is to write tagged files to an output directory instead of modifying originals in place:
+The recommended workflow is to start the guided setup and perform a dry run:
+
+```bash
+cargo run -p tunetagger
+```
+
+After reviewing the dry-run results and batch report, run the wizard again and
+select write mode. TuneTagger writes tagged copies to the destination rather
+than modifying the source MP3 files.
+
+The equivalent advanced CLI command is:
 
 ```bash
 cargo run -p tunetagger -- tag ./input/song.mp3 --write --output ./tagged
