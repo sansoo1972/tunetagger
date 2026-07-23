@@ -2,7 +2,7 @@ use clap::{Args, ValueEnum};
 use std::fmt::Write as _;
 use std::io::{BufRead, IsTerminal, Write};
 use std::path::{Path, PathBuf};
-use tunetagger_core::AppConfig;
+use tunetagger_core::{AppConfig, TuneTaggerError};
 use tunetagger_files::scan_mp3_files;
 
 use super::tag::{run_with_outcome as tag_one, TagArgs, TagOutcome};
@@ -351,6 +351,28 @@ fn display_relative(path: &Path, base: &Path) -> String {
 }
 
 fn failure_category(error: &anyhow::Error) -> &'static str {
+    for source in error.chain() {
+        let Some(error) = source.downcast_ref::<TuneTaggerError>() else {
+            continue;
+        };
+
+        return match error {
+            TuneTaggerError::RecognitionNoMatch(_) => "recognition / no match",
+            TuneTaggerError::RecognitionAudio(_) => "audio decoding",
+            TuneTaggerError::RecognitionFingerprint(_) => "fingerprinting",
+            TuneTaggerError::RecognitionService(_) => "recognition service",
+            TuneTaggerError::Network(_) => "network",
+            TuneTaggerError::Recognition(_) => "recognition",
+            TuneTaggerError::Metadata(_) => "metadata",
+            TuneTaggerError::Tagging(_) => "tagging",
+            TuneTaggerError::ConfigParse(_) => "configuration",
+            TuneTaggerError::Io(_) | TuneTaggerError::WalkDir(_) => "I/O",
+            TuneTaggerError::UnsupportedFileType(_) | TuneTaggerError::Validation(_) => {
+                "validation"
+            }
+        };
+    }
+
     let message = format!("{error:#}").to_ascii_lowercase();
 
     if message.contains("recognition") || message.contains("fingerprint") {
@@ -408,6 +430,22 @@ mod tests {
             "permission denied",
         ));
         assert_eq!(failure_category(&error), "I/O");
+    }
+
+    #[test]
+    fn categorizes_structured_recognition_failures() {
+        let no_match = anyhow::Error::new(TuneTaggerError::RecognitionNoMatch(
+            "no matching track".to_owned(),
+        ));
+        let network =
+            anyhow::Error::new(TuneTaggerError::Network("connection timed out".to_owned()));
+        let audio = anyhow::Error::new(TuneTaggerError::RecognitionAudio(
+            "could not decode stream".to_owned(),
+        ));
+
+        assert_eq!(failure_category(&no_match), "recognition / no match");
+        assert_eq!(failure_category(&network), "network");
+        assert_eq!(failure_category(&audio), "audio decoding");
     }
 
     #[test]

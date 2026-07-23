@@ -16,6 +16,21 @@ pub enum TuneTaggerError {
     #[error("recognition failed: {0}")]
     Recognition(String),
 
+    #[error("no recognition match: {0}")]
+    RecognitionNoMatch(String),
+
+    #[error("audio decoding failed: {0}")]
+    RecognitionAudio(String),
+
+    #[error("audio fingerprinting failed: {0}")]
+    RecognitionFingerprint(String),
+
+    #[error("recognition service returned an invalid response: {0}")]
+    RecognitionService(String),
+
+    #[error("network request failed: {0}")]
+    Network(String),
+
     #[error("metadata lookup failed: {0}")]
     Metadata(String),
 
