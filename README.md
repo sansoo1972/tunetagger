@@ -8,7 +8,7 @@ Apple Music/iTunes Match is treated as a downstream use case, not a core depende
 
 ## Current milestone
 
-Current milestone: `v0.1.4`.
+Current milestone: `v0.1.5`.
 
 Validated so far:
 
@@ -23,6 +23,7 @@ batch write  works, non-recursive by default
 batch report works with detailed outcomes
 existing destination handling works
 guided setup works
+three-window recognition fallback works
 ```
 
 The latest validated batch run completed successfully:
@@ -228,7 +229,10 @@ Skipped matches are listed separately in the console summary and batch report.
 Recognition failures are categorized in the report. An unmatched recording is
 reported as `recognition / no match`; real connectivity failures are reported
 as `network`. Audio decoding, fingerprinting, validation, and malformed service
-responses are shown separately.
+responses are shown separately. When the initial middle-of-track fingerprint
+returns no match, TuneTagger retries distinct 12-second windows near 25% and
+75% of the track. If all attempts fail, the report lists the windows that were
+tried.
 
 ## Project layout
 
