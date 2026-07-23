@@ -4,7 +4,7 @@ All notable changes to TuneTagger will be documented in this file.
 
 The format is inspired by Keep a Changelog, and the project uses semantic versioning while it evolves.
 
-## [Unreleased]
+## [0.1.5] - 2026-07-23
 
 ### Added
 
@@ -18,6 +18,13 @@ The format is inspired by Keep a Changelog, and the project uses semantic versio
 - Recognition retries now occur only for genuine no-match responses. Network,
   decoding, fingerprinting, validation, and malformed-response failures stop
   immediately and retain their specific error categories.
+
+### Validated
+
+- Confirmed a previously unmatched track is recovered by a fallback recognition
+  window.
+- Confirmed exhausted recognition reports all three attempted window positions
+  for an unmatched track.
 
 ## [0.1.4] - 2026-07-23
 

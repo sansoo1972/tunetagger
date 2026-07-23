@@ -8,7 +8,7 @@ Apple Music/iTunes Match is treated as a downstream use case, not a core depende
 
 ## Current milestone
 
-Current milestone: `v0.1.4`.
+Current milestone: `v0.1.5`.
 
 Validated so far:
 
@@ -23,6 +23,7 @@ batch write  works, non-recursive by default
 batch report works with detailed outcomes
 existing destination handling works
 guided setup works
+three-window recognition fallback works
 ```
 
 The latest validated batch run completed successfully:
