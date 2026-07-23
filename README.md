@@ -57,6 +57,7 @@ tunetagger tag ./input/song.mp3 --write --output ./tagged
 tunetagger batch ./input --write --output ./tagged
 tunetagger batch ./input --write --recursive --output ./tagged
 tunetagger batch ./input --write --output ./tagged --report ./reports/batch.txt
+tunetagger batch ./input --write --output ./tagged --existing skip
 ```
 
 During development, run through Cargo:
@@ -115,6 +116,12 @@ Batch mode currently processes MP3 files only. It is non-recursive unless `--rec
 After processing, it writes a plain-text report to `batch-report.txt`. Use `--report <path>`
 to choose another location. The report lists every successful file and every failed file,
 including the failure category and detailed reason.
+
+Before processing a file, batch mode checks for the same filename in the output
+directory. The default `--existing ask` policy prompts when a match is found:
+skip it, skip all further matches for this run, or process it. Automated and
+non-interactive runs should select `--existing skip` or `--existing process`.
+Skipped matches are listed separately in the console summary and batch report.
 
 ## Project layout
 
