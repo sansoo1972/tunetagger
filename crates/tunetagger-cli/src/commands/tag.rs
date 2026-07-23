@@ -39,7 +39,7 @@ pub async fn run_with_outcome(config_path: PathBuf, args: TagArgs) -> anyhow::Re
 
     let path = args.path.clone();
     let identity = tokio::task::spawn_blocking(move || {
-        let recognizer = SongRecRecognizer::default();
+        let recognizer = SongRecRecognizer;
         recognizer.recognize_file(path)
     })
     .await??;
