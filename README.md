@@ -56,6 +56,7 @@ tunetagger tag ./input/song.mp3 --dry-run
 tunetagger tag ./input/song.mp3 --write --output ./tagged
 tunetagger batch ./input --write --output ./tagged
 tunetagger batch ./input --write --recursive --output ./tagged
+tunetagger batch ./input --write --output ./tagged --report ./reports/batch.txt
 ```
 
 During development, run through Cargo:
@@ -111,6 +112,9 @@ cargo run -p tunetagger -- batch "/path/to/mp3-folder" \
 ```
 
 Batch mode currently processes MP3 files only. It is non-recursive unless `--recursive` is supplied.
+After processing, it writes a plain-text report to `batch-report.txt`. Use `--report <path>`
+to choose another location. The report lists every successful file and every failed file,
+including the failure category and detailed reason.
 
 ## Project layout
 
