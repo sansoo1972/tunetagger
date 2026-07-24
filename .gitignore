@@ -1,6 +1,7 @@
 /target/
 .DS_Store
 *.log
+*.code-workspace
 /input/
 /tagged/
 /review/
